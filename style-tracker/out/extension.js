@@ -30,32 +30,50 @@ const fs = __importStar(require("fs"));
 let cssEditor;
 let decorationType;
 let statusBarItem;
+let trackingDisposables = [];
+let isTrackingEnabled = false;
+function updateTrackingState(enabled) {
+    isTrackingEnabled = enabled;
+    vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', isTrackingEnabled);
+    if (isTrackingEnabled) {
+        const cursorDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
+            if (isTrackingEnabled && event.textEditor.document.languageId === 'html') {
+                handleCursorChange(event.textEditor);
+            }
+        });
+        const editorDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
+            if (isTrackingEnabled && editor && editor.document.languageId === 'html') {
+                handleCursorChange(editor);
+            }
+        });
+        trackingDisposables.push(cursorDisposable, editorDisposable);
+    }
+    else {
+        trackingDisposables.forEach(d => d.dispose());
+        trackingDisposables = [];
+        clearHighlights();
+    }
+}
 function activate(context) {
     console.log('HTML CSS Tracker is now active');
-    // Create decoration type for highlighting CSS rules
     decorationType = vscode.window.createTextEditorDecorationType({
         backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
         border: '2px solid',
         borderColor: new vscode.ThemeColor('editor.findMatchBorder'),
     });
-    // Create status bar item
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.text = "$(link) CSS Tracker";
-    context.subscriptions.push(statusBarItem);
-    // Track cursor position changes
-    const cursorDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
-        if (event.textEditor.document.languageId === 'html') {
-            handleCursorChange(event.textEditor);
-        }
+    context.subscriptions.push(statusBarItem, decorationType);
+    const startTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.startTracking', () => {
+        updateTrackingState(true);
     });
-    // Track active editor changes
-    const editorDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor && editor.document.languageId === 'html') {
-            handleCursorChange(editor);
-        }
+    const stopTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.stopTracking', () => {
+        updateTrackingState(false);
     });
-    // Command to manually trigger CSS tracking
     const trackCommand = vscode.commands.registerCommand('htmlCssTracker.trackElement', () => {
+        if (!isTrackingEnabled) {
+            updateTrackingState(true);
+        }
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document.languageId === 'html') {
             handleCursorChange(editor);
@@ -64,7 +82,6 @@ function activate(context) {
             vscode.window.showInformationMessage('Please open an HTML file to use CSS Tracker');
         }
     });
-    // Command to close CSS preview
     const closeCommand = vscode.commands.registerCommand('htmlCssTracker.close', () => {
         if (cssEditor) {
             cssEditor.setDecorations(decorationType, []);
@@ -72,21 +89,20 @@ function activate(context) {
         }
         statusBarItem.hide();
     });
-    context.subscriptions.push(cursorDisposable, editorDisposable, trackCommand, closeCommand, decorationType);
+    context.subscriptions.push(startTrackingCommand, stopTrackingCommand, trackCommand, closeCommand);
+    updateTrackingState(true);
 }
 exports.activate = activate;
 async function handleCursorChange(editor) {
     const position = editor.selection.active;
     const document = editor.document;
     const lineText = document.lineAt(position.line).text;
-    // Get the word under cursor
-    const wordRange = document.getWordRangeAtPosition(position, /[\w-]+/);
+    const wordRange = document.getWordRangeAtPosition(position, /["\w-]+/);
     if (!wordRange) {
         clearHighlights();
         return;
     }
     const word = document.getText(wordRange);
-    // Check if cursor is on a class or id attribute
     const { type, selector } = detectSelectorType(lineText, word, wordRange.start.character);
     if (!type) {
         clearHighlights();
@@ -94,11 +110,9 @@ async function handleCursorChange(editor) {
     }
     statusBarItem.text = `$(link) Tracking: ${selector}`;
     statusBarItem.show();
-    // Find and highlight CSS rules
     await findAndHighlightCSSRules(editor, selector, type);
 }
 function detectSelectorType(lineText, word, cursorPos) {
-    // Check if we're in a class attribute
     const classMatch = lineText.match(/class\s*=\s*["']([^"']*)["']/);
     if (classMatch && classMatch.index !== undefined) {
         const classContent = classMatch[1];
@@ -108,7 +122,6 @@ function detectSelectorType(lineText, word, cursorPos) {
             return { type: 'class', selector: `.${word}` };
         }
     }
-    // Check if we're in an id attribute
     const idMatch = lineText.match(/id\s*=\s*["']([^"']*)["']/);
     if (idMatch && idMatch.index !== undefined) {
         const idContent = idMatch[1];
@@ -123,13 +136,11 @@ function detectSelectorType(lineText, word, cursorPos) {
 async function findAndHighlightCSSRules(htmlEditor, selector, type) {
     const htmlDoc = htmlEditor.document;
     const htmlContent = htmlDoc.getText();
-    // Find linked CSS files
     const cssFiles = findLinkedCSSFiles(htmlContent, htmlDoc.uri.fsPath);
     if (cssFiles.length === 0) {
         vscode.window.showInformationMessage('No local CSS files found (external URLs or unresolved paths may have been skipped)');
         return;
     }
-    // Search for selector in CSS files
     let found = false;
     for (const cssFile of cssFiles) {
         if (fs.existsSync(cssFile)) {
@@ -138,7 +149,7 @@ async function findAndHighlightCSSRules(htmlEditor, selector, type) {
             if (ranges.length > 0) {
                 await openAndHighlightCSS(cssFile, ranges);
                 found = true;
-                break; // Highlight in first file found
+                break;
             }
         }
     }
@@ -168,43 +179,34 @@ function findLinkedCSSFiles(htmlContent, htmlFilePath) {
     return cssFiles;
 }
 function resolveFilePath(href, htmlFilePath) {
-    // Skip remote URLs (http(s) or protocol-relative)
     if (/^(https?:)?\/\//i.test(href)) {
         return null;
     }
-    // If href starts with a leading slash, treat it as workspace-root relative when possible
     if (href.startsWith('/')) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders && workspaceFolders.length > 0) {
             const workspaceRoot = workspaceFolders[0].uri.fsPath;
-            // remove leading slashes
             const rel = href.replace(/^\/+/, '');
             return path.resolve(workspaceRoot, rel);
         }
-        // No workspace open — can't reliably resolve root-relative paths
         return null;
     }
-    // Otherwise resolve relative to the HTML file
     const htmlDir = path.dirname(htmlFilePath);
     return path.resolve(htmlDir, href);
 }
 function findSelectorInCSS(cssContent, selector) {
     const ranges = [];
     const lines = cssContent.split('\n');
-    // Escape special regex characters in selector
-    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\\\]]/g, '\\$&');
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        // Look for selector at start of rule or after comma
         const selectorRegex = new RegExp(`(?:^|,|\\s)${escapedSelector}(?=[\\s,{:])`, 'g');
         let match;
         while ((match = selectorRegex.exec(line)) !== null) {
-            // Find the entire rule block
             let startLine = i;
             let endLine = i;
             let braceCount = 0;
             let foundOpenBrace = false;
-            // Search forward for the closing brace
             for (let j = i; j < lines.length; j++) {
                 const currentLine = lines[j];
                 for (const char of currentLine) {
@@ -232,40 +234,32 @@ function findSelectorInCSS(cssContent, selector) {
 async function openAndHighlightCSS(cssFilePath, ranges) {
     const cssUri = vscode.Uri.file(cssFilePath);
     try {
-        // If cssEditor is no longer visible, undefine it so a new one is created
         if (cssEditor && !vscode.window.visibleTextEditors.includes(cssEditor)) {
             cssEditor = undefined;
         }
-        // Open the CSS document
         const doc = await vscode.workspace.openTextDocument(cssUri);
-        // Decide which column to use: reuse the existing cssEditor column when possible
         let targetColumn = undefined;
         if (cssEditor && cssEditor.viewColumn) {
             targetColumn = cssEditor.viewColumn;
         }
         else {
-            // default to Beside for the first time
             targetColumn = vscode.ViewColumn.Beside;
         }
-        // If there was a previous cssEditor, clear its decorations so we don't leave stale highlights
         if (cssEditor && decorationType) {
             try {
                 cssEditor.setDecorations(decorationType, []);
             }
             catch { /* ignore */ }
         }
-        // Show the document in the target column — this will reuse the same editor pane when possible
         const shownEditor = await vscode.window.showTextDocument(doc, {
             viewColumn: targetColumn,
             preserveFocus: false,
             preview: true
         });
-        // Keep a reference to the CSS editor pane and apply decorations there
         cssEditor = shownEditor;
         if (decorationType) {
             cssEditor.setDecorations(decorationType, ranges);
         }
-        // Scroll to first match
         if (ranges.length > 0) {
             cssEditor.revealRange(ranges[0], vscode.TextEditorRevealType.InCenter);
         }
@@ -283,10 +277,7 @@ function clearHighlights() {
         statusBarItem.hide();
 }
 function deactivate() {
-    if (cssEditor) {
-        if (decorationType)
-            cssEditor.setDecorations(decorationType, []);
-    }
+    updateTrackingState(false);
     if (statusBarItem)
         statusBarItem.dispose();
 }

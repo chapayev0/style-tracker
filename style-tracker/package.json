@@ -14,6 +14,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "icon": "images/icon.png",
   "type": "commonjs",
   "engines": {
     "vscode": "^1.80.0"
@@ -21,7 +22,9 @@
   "activationEvents": [
     "onLanguage:html",
     "onCommand:htmlCssTracker.trackElement",
-    "onCommand:htmlCssTracker.close"
+    "onCommand:htmlCssTracker.close",
+    "onCommand:htmlCssTracker.startTracking",
+    "onCommand:htmlCssTracker.stopTracking"
   ],
   "contributes": {
     "commands": [
@@ -32,8 +35,32 @@
       {
         "command": "htmlCssTracker.close",
         "title": "Close CSS Tracker"
+      },
+      {
+        "command": "htmlCssTracker.startTracking",
+        "title": "Enable CSS Tracking",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "htmlCssTracker.stopTracking",
+        "title": "Disable CSS Tracking",
+        "icon": "$(eye-closed)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "htmlCssTracker.stopTracking",
+          "when": "resourceLangId == html && htmlCssTracker.isTrackingEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "htmlCssTracker.startTracking",
+          "when": "resourceLangId == html && !htmlCssTracker.isTrackingEnabled",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "devDependencies": {
     "@types/node": "^18.0.0",
