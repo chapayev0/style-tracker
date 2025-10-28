@@ -165,33 +165,26 @@ function findLinkedCSSFiles(htmlContent, htmlFilePath) {
             cssFiles.push(absolutePath);
         }
     }
-    function resolveFilePath(href, htmlFilePath) {
-        // Skip remote URLs (http(s) or protocol-relative)
-        if (/^(https?:)?\/\//i.test(href)) {
-            return null;
-        }
-        // If href starts with a leading slash, treat it as workspace-root relative when possible
-        if (href.startsWith('/')) {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders && workspaceFolders.length > 0) {
-                const workspaceRoot = workspaceFolders[0].uri.fsPath;
-                // remove leading slashes
-                const rel = href.replace(/^\/+/, '');
-                return path.resolve(workspaceRoot, rel);
-            }
-            // No workspace open — can't reliably resolve root-relative paths
-            return null;
-        }
-        // Otherwise resolve relative to the HTML file
-        const htmlDir = path.dirname(htmlFilePath);
-        return path.resolve(htmlDir, href);
-    }
     return cssFiles;
 }
 function resolveFilePath(href, htmlFilePath) {
-    if (path.isAbsolute(href)) {
-        return href;
+    // Skip remote URLs (http(s) or protocol-relative)
+    if (/^(https?:)?\/\//i.test(href)) {
+        return null;
     }
+    // If href starts with a leading slash, treat it as workspace-root relative when possible
+    if (href.startsWith('/')) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            const workspaceRoot = workspaceFolders[0].uri.fsPath;
+            // remove leading slashes
+            const rel = href.replace(/^\/+/, '');
+            return path.resolve(workspaceRoot, rel);
+        }
+        // No workspace open — can't reliably resolve root-relative paths
+        return null;
+    }
+    // Otherwise resolve relative to the HTML file
     const htmlDir = path.dirname(htmlFilePath);
     return path.resolve(htmlDir, href);
 }
@@ -239,6 +232,10 @@ function findSelectorInCSS(cssContent, selector) {
 async function openAndHighlightCSS(cssFilePath, ranges) {
     const cssUri = vscode.Uri.file(cssFilePath);
     try {
+        // If cssEditor is no longer visible, undefine it so a new one is created
+        if (cssEditor && !vscode.window.visibleTextEditors.includes(cssEditor)) {
+            cssEditor = undefined;
+        }
         // Open the CSS document
         const doc = await vscode.workspace.openTextDocument(cssUri);
         // Decide which column to use: reuse the existing cssEditor column when possible

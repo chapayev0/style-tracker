@@ -168,6 +168,10 @@ function findLinkedCSSFiles(htmlContent: string, htmlFilePath: string): string[]
                 cssFiles.push(absolutePath);
             }
         }
+    
+    return cssFiles;
+}
+
 function resolveFilePath(href: string, htmlFilePath: string): string | null {
     // Skip remote URLs (http(s) or protocol-relative)
     if (/^(https?:)?\/\//i.test(href)) {
@@ -189,18 +193,6 @@ function resolveFilePath(href: string, htmlFilePath: string): string | null {
     }
 
     // Otherwise resolve relative to the HTML file
-    const htmlDir = path.dirname(htmlFilePath);
-    return path.resolve(htmlDir, href);
-}
-    
-    return cssFiles;
-}
-
-function resolveFilePath(href: string, htmlFilePath: string): string {
-    if (path.isAbsolute(href)) {
-        return href;
-    }
-    
     const htmlDir = path.dirname(htmlFilePath);
     return path.resolve(htmlDir, href);
 }
@@ -262,6 +254,11 @@ async function openAndHighlightCSS(cssFilePath: string, ranges: vscode.Range[]) 
     const cssUri = vscode.Uri.file(cssFilePath);
     
     try {
+        // If cssEditor is no longer visible, undefine it so a new one is created
+        if (cssEditor && !vscode.window.visibleTextEditors.includes(cssEditor)) {
+            cssEditor = undefined;
+        }
+
         // Open the CSS document
         const doc = await vscode.workspace.openTextDocument(cssUri);
 
