@@ -280,7 +280,7 @@ async function openAndHighlightCSS(cssFilePath: string, ranges: vscode.Range[]) 
         const shownEditor = await vscode.window.showTextDocument(doc, {
             viewColumn: targetColumn,
             preserveFocus: false,
-            preview: false
+            preview: true
         });
 
         // Keep a reference to the CSS editor pane and apply decorations there
