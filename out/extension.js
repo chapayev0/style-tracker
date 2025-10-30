@@ -32,7 +32,7 @@ let decorationType;
 let statusBarItem;
 let isTrackingEnabled = true; // Default to enabled
 function activate(context) {
-    console.log('HTML CSS Tracker is now active');
+    console.log('HTML Style Tracker is now active');
     // Create decoration type for highlighting CSS rules
     decorationType = vscode.window.createTextEditorDecorationType({
         backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
@@ -41,7 +41,7 @@ function activate(context) {
     });
     // Create status bar item
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = "$(link) CSS Tracker";
+    statusBarItem.text = "$(link) Style Tracker";
     context.subscriptions.push(statusBarItem);
     // Set initial context
     vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', isTrackingEnabled);
@@ -61,7 +61,7 @@ function activate(context) {
     const startTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.startTracking', () => {
         isTrackingEnabled = true;
         vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', true);
-        vscode.window.showInformationMessage('CSS Tracking enabled');
+        vscode.window.showInformationMessage('Style Tracking enabled');
     });
     // Command to disable tracking
     const stopTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.stopTracking', () => {
@@ -73,7 +73,7 @@ function activate(context) {
             cssEditor = undefined;
         }
         statusBarItem.hide();
-        vscode.window.showInformationMessage('CSS Tracking disabled');
+        vscode.window.showInformationMessage('Style Tracking disabled');
     });
     // Command to manually trigger CSS tracking
     const trackCommand = vscode.commands.registerCommand('htmlCssTracker.trackElement', () => {
@@ -82,7 +82,7 @@ function activate(context) {
             handleCursorChange(editor);
         }
         else {
-            vscode.window.showInformationMessage('Please open a file to use CSS Tracker');
+            vscode.window.showInformationMessage('Please open a file to use Style Tracker');
         }
     });
     // Command to close CSS preview
@@ -236,7 +236,7 @@ async function findAndHighlightCSSRules(htmlEditor, selector, type) {
     // If not found in internal CSS, search linked external CSS files
     const cssFiles = findLinkedCSSFiles(htmlContent, htmlDoc.uri.fsPath);
     if (cssFiles.length === 0) {
-        vscode.window.showInformationMessage('No local CSS files found (external URLs or unresolved paths may have been skipped)');
+        vscode.window.showInformationMessage('No local Style files found (external URLs or unresolved paths may have been skipped)');
         clearHighlights();
         return;
     }

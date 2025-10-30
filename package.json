@@ -1,21 +1,23 @@
 {
   "name": "style-tracker",
-  "version": "1.0.0",
-  "description": "Instantly locate and highlight CSS styles for any HTML element, class, or ID in your code. Real-time CSS tracking with split view.",
   "displayName": "Style Tracker",
-  "publisher": "bashademy",
+  "version": "1.0.0",
+  "description": "Real-time CSS tracking with split view. Instantly locate and highlight CSS styles for any HTML element, class, or ID in your code.",
+  "publisher": "Bashademy",
   "main": "out/extension.js",
-  "directories": {
-    "test": "test"
+  "icon": "images/icon.png",
+  "author": "Dilhara MMS",
+  "license": "ISC",
+  "homepage": "https://bashademy.com/style-tracker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chapayev0/style-tracker.git"
   },
-  "scripts": {
-    "build": "tsc -p .",
-    "watch": "tsc -p . --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "bugs": {
+    "url": "https://github.com/chapayev0/style-tracker/issues"
   },
   "categories": [
-    "Other",
-    "Programming Languages"
+    "Other"
   ],
   "keywords": [
     "css",
@@ -26,18 +28,6 @@
     "jsx",
     "react"
   ],
-  "author": "",
-  "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/bashademy/style-tracker.git"
-  },
-  "homepage": "https://bashademy.com/",
-  "bugs": {
-    "url": "https://github.com/bashademy/style-tracker/issues"
-  },
-  "icon": "images/icon.png",
-  "type": "commonjs",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -80,6 +70,18 @@
       ]
     }
   },
+  "galleryBanner": {
+    "color": "#5B2E91",
+    "theme": "dark"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -p . --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "devDependencies": {
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.80.0",
@@ -88,5 +90,6 @@
     "@vscode/test-electron": "^2.3.3",
     "eslint": "^8.44.0",
     "typescript": "^5.1.6"
-  }
+  },
+  "type": "commonjs"
 }

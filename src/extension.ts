@@ -8,7 +8,7 @@ let statusBarItem: vscode.StatusBarItem;
 let isTrackingEnabled = true; // Default to enabled
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('HTML CSS Tracker is now active');
+    console.log('HTML Style Tracker is now active');
 
     // Create decoration type for highlighting CSS rules
     decorationType = vscode.window.createTextEditorDecorationType({
@@ -19,7 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Create status bar item
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = "$(link) CSS Tracker";
+    statusBarItem.text = "$(link) Style Tracker";
     context.subscriptions.push(statusBarItem);
 
     // Set initial context
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     const startTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.startTracking', () => {
         isTrackingEnabled = true;
         vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', true);
-        vscode.window.showInformationMessage('CSS Tracking enabled');
+        vscode.window.showInformationMessage('Style Tracking enabled');
     });
 
     // Command to disable tracking
@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
         statusBarItem.hide();
 
-        vscode.window.showInformationMessage('CSS Tracking disabled');
+        vscode.window.showInformationMessage('Style Tracking disabled');
     });
 
     // Command to manually trigger CSS tracking
@@ -67,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (editor) {
             handleCursorChange(editor);
         } else {
-            vscode.window.showInformationMessage('Please open a file to use CSS Tracker');
+            vscode.window.showInformationMessage('Please open a file to use Style Tracker');
         }
     });
 
@@ -265,7 +265,7 @@ async function findAndHighlightCSSRules(htmlEditor: vscode.TextEditor, selector:
     const cssFiles = findLinkedCSSFiles(htmlContent, htmlDoc.uri.fsPath);
 
     if (cssFiles.length === 0) {
-        vscode.window.showInformationMessage('No local CSS files found (external URLs or unresolved paths may have been skipped)');
+        vscode.window.showInformationMessage('No local Style files found (external URLs or unresolved paths may have been skipped)');
         clearHighlights();
         return;
     }
