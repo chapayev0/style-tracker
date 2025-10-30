@@ -20,11 +20,7 @@
     "vscode": "^1.80.0"
   },
   "activationEvents": [
-    "onLanguage:html",
-    "onCommand:htmlCssTracker.trackElement",
-    "onCommand:htmlCssTracker.close",
-    "onCommand:htmlCssTracker.startTracking",
-    "onCommand:htmlCssTracker.stopTracking"
+    "onStartupFinished"
   ],
   "contributes": {
     "commands": [
@@ -39,24 +35,24 @@
       {
         "command": "htmlCssTracker.startTracking",
         "title": "Enable CSS Tracking",
-        "icon": "$(eye)"
+        "icon": "$(eye-closed)"
       },
       {
         "command": "htmlCssTracker.stopTracking",
         "title": "Disable CSS Tracking",
-        "icon": "$(eye-closed)"
+        "icon": "$(eye)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "htmlCssTracker.stopTracking",
-          "when": "resourceLangId == html && htmlCssTracker.isTrackingEnabled",
+          "when": "editorTextFocus && htmlCssTracker.isTrackingEnabled",
           "group": "navigation"
         },
         {
           "command": "htmlCssTracker.startTracking",
-          "when": "resourceLangId == html && !htmlCssTracker.isTrackingEnabled",
+          "when": "editorTextFocus && !htmlCssTracker.isTrackingEnabled",
           "group": "navigation"
         }
       ]

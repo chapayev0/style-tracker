@@ -5,6 +5,7 @@ import * as fs from 'fs';
 let cssEditor: vscode.TextEditor | undefined;
 let decorationType: vscode.TextEditorDecorationType;
 let statusBarItem: vscode.StatusBarItem;
+let isTrackingEnabled = true; // Default to enabled
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('HTML CSS Tracker is now active');
@@ -21,27 +22,52 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.text = "$(link) CSS Tracker";
     context.subscriptions.push(statusBarItem);
 
-    // Track cursor position changes
+    // Set initial context
+    vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', isTrackingEnabled);
+
+    // Track cursor position changes in any file type
     const cursorDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
-        if (event.textEditor.document.languageId === 'html') {
+        if (isTrackingEnabled) {
             handleCursorChange(event.textEditor);
         }
     });
 
-    // Track active editor changes
+    // Track active editor changes in any file type
     const editorDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor && editor.document.languageId === 'html') {
+        if (isTrackingEnabled && editor) {
             handleCursorChange(editor);
         }
+    });
+
+    // Command to enable tracking
+    const startTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.startTracking', () => {
+        isTrackingEnabled = true;
+        vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', true);
+        vscode.window.showInformationMessage('CSS Tracking enabled');
+    });
+
+    // Command to disable tracking
+    const stopTrackingCommand = vscode.commands.registerCommand('htmlCssTracker.stopTracking', () => {
+        isTrackingEnabled = false;
+        vscode.commands.executeCommand('setContext', 'htmlCssTracker.isTrackingEnabled', false);
+
+        // Close CSS panel and clear highlights when disabling
+        if (cssEditor) {
+            cssEditor.setDecorations(decorationType, []);
+            cssEditor = undefined;
+        }
+        statusBarItem.hide();
+
+        vscode.window.showInformationMessage('CSS Tracking disabled');
     });
 
     // Command to manually trigger CSS tracking
     const trackCommand = vscode.commands.registerCommand('htmlCssTracker.trackElement', () => {
         const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document.languageId === 'html') {
+        if (editor) {
             handleCursorChange(editor);
         } else {
-            vscode.window.showInformationMessage('Please open an HTML file to use CSS Tracker');
+            vscode.window.showInformationMessage('Please open a file to use CSS Tracker');
         }
     });
 
@@ -54,7 +80,15 @@ export function activate(context: vscode.ExtensionContext) {
         statusBarItem.hide();
     });
 
-    context.subscriptions.push(cursorDisposable, editorDisposable, trackCommand, closeCommand, decorationType);
+    context.subscriptions.push(
+        cursorDisposable,
+        editorDisposable,
+        startTrackingCommand,
+        stopTrackingCommand,
+        trackCommand,
+        closeCommand,
+        decorationType
+    );
 }
 
 async function handleCursorChange(editor: vscode.TextEditor) {
@@ -86,16 +120,28 @@ async function handleCursorChange(editor: vscode.TextEditor) {
     await findAndHighlightCSSRules(editor, selector, type);
 }
 
-function detectSelectorType(lineText: string, word: string, cursorPos: number): 
-    { type: 'class' | 'id' | null, selector: string } {
-    
-    // Check if we're in a class attribute
+function detectSelectorType(lineText: string, word: string, cursorPos: number):
+    { type: 'class' | 'id' | 'element' | null, selector: string } {
+
+    // Check if we're in a class attribute (HTML: class="...")
     const classMatch = lineText.match(/class\s*=\s*["']([^"']*)["']/);
     if (classMatch && classMatch.index !== undefined) {
         const classContent = classMatch[1];
         const classStart = lineText.indexOf(classContent, classMatch.index);
         const classEnd = classStart + classContent.length;
-        
+
+        if (cursorPos >= classStart && cursorPos <= classEnd) {
+            return { type: 'class', selector: `.${word}` };
+        }
+    }
+
+    // Check if we're in a className attribute (JSX/React: className="...")
+    const classNameMatch = lineText.match(/className\s*=\s*["']([^"']*)["']/);
+    if (classNameMatch && classNameMatch.index !== undefined) {
+        const classContent = classNameMatch[1];
+        const classStart = lineText.indexOf(classContent, classNameMatch.index);
+        const classEnd = classStart + classContent.length;
+
         if (cursorPos >= classStart && cursorPos <= classEnd) {
             return { type: 'class', selector: `.${word}` };
         }
@@ -107,34 +153,130 @@ function detectSelectorType(lineText: string, word: string, cursorPos: number):
         const idContent = idMatch[1];
         const idStart = lineText.indexOf(idContent, idMatch.index);
         const idEnd = idStart + idContent.length;
-        
+
         if (cursorPos >= idStart && cursorPos <= idEnd) {
             return { type: 'id', selector: `#${word}` };
+        }
+    }
+
+    // Check if cursor is directly on a CSS class selector (e.g., .className)
+    if (lineText[cursorPos - 1] === '.' || (cursorPos > 0 && lineText.substring(0, cursorPos).match(/\.\w*$/))) {
+        return { type: 'class', selector: `.${word}` };
+    }
+
+    // Check if cursor is directly on a CSS id selector (e.g., #idName)
+    if (lineText[cursorPos - 1] === '#' || (cursorPos > 0 && lineText.substring(0, cursorPos).match(/#\w*$/))) {
+        return { type: 'id', selector: `#${word}` };
+    }
+
+    // Check if cursor is on an HTML element tag (e.g., <body>, <div>, <h1>)
+    // Match opening tags: <tagname or <tagname> or <tagname attributes>
+    const openTagMatch = lineText.match(/<(\w+)(?:\s|>|\/)/);
+    if (openTagMatch && openTagMatch.index !== undefined) {
+        const tagName = openTagMatch[1];
+        const tagStart = openTagMatch.index + 1; // Position after '<'
+        const tagEnd = tagStart + tagName.length;
+
+        if (cursorPos >= tagStart && cursorPos <= tagEnd && word.toLowerCase() === tagName.toLowerCase()) {
+            return { type: 'element', selector: tagName.toLowerCase() };
+        }
+    }
+
+    // Match closing tags: </tagname>
+    const closeTagMatch = lineText.match(/<\/(\w+)>/);
+    if (closeTagMatch && closeTagMatch.index !== undefined) {
+        const tagName = closeTagMatch[1];
+        const tagStart = closeTagMatch.index + 2; // Position after '</'
+        const tagEnd = tagStart + tagName.length;
+
+        if (cursorPos >= tagStart && cursorPos <= tagEnd && word.toLowerCase() === tagName.toLowerCase()) {
+            return { type: 'element', selector: tagName.toLowerCase() };
         }
     }
 
     return { type: null, selector: '' };
 }
 
-async function findAndHighlightCSSRules(htmlEditor: vscode.TextEditor, selector: string, type: 'class' | 'id') {
+function findSelectorInInternalCSS(fileContent: string, selector: string, document: vscode.TextDocument): vscode.Range[] {
+    const ranges: vscode.Range[] = [];
+
+    // Find all <style> tags and their content
+    const styleTagRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    let styleMatch;
+
+    while ((styleMatch = styleTagRegex.exec(fileContent)) !== null) {
+        const cssContent = styleMatch[1];
+        const styleStartIndex = styleMatch.index + styleMatch[0].indexOf('>') + 1;
+
+        // Find the selector within this style block
+        const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const selectorRegex = new RegExp(`(?:^|,|\\s)${escapedSelector}(?=[\\s,{:])`, 'gm');
+        let match;
+
+        while ((match = selectorRegex.exec(cssContent)) !== null) {
+            // Calculate the actual position in the document
+            const matchStartIndex = styleStartIndex + match.index;
+            const matchStartPos = document.positionAt(matchStartIndex);
+
+            // Find the entire CSS rule block
+            let braceCount = 0;
+            let foundOpenBrace = false;
+            let ruleStart = matchStartIndex;
+            let ruleEnd = matchStartIndex;
+
+            // Search forward from the selector to find the complete rule
+            for (let i = match.index; i < cssContent.length; i++) {
+                const char = cssContent[i];
+                if (char === '{') {
+                    braceCount++;
+                    foundOpenBrace = true;
+                } else if (char === '}') {
+                    braceCount--;
+                    if (foundOpenBrace && braceCount === 0) {
+                        ruleEnd = styleStartIndex + i + 1;
+                        break;
+                    }
+                }
+            }
+
+            const startPos = document.positionAt(ruleStart);
+            const endPos = document.positionAt(ruleEnd);
+
+            ranges.push(new vscode.Range(startPos, endPos));
+        }
+    }
+
+    return ranges;
+}
+
+async function findAndHighlightCSSRules(htmlEditor: vscode.TextEditor, selector: string, type: 'class' | 'id' | 'element') {
     const htmlDoc = htmlEditor.document;
     const htmlContent = htmlDoc.getText();
-    
-    // Find linked CSS files
-    const cssFiles = findLinkedCSSFiles(htmlContent, htmlDoc.uri.fsPath);
-    
-        if (cssFiles.length === 0) {
-            vscode.window.showInformationMessage('No local CSS files found (external URLs or unresolved paths may have been skipped)');
-            return;
-        }
 
-    // Search for selector in CSS files
+    // First, check for internal CSS in the same file (within <style> tags)
+    const internalCSSRanges = findSelectorInInternalCSS(htmlContent, selector, htmlDoc);
+    if (internalCSSRanges.length > 0) {
+        // Open the same file in split view and highlight
+        await openAndHighlightCSS(htmlDoc.uri.fsPath, internalCSSRanges);
+        return;
+    }
+
+    // If not found in internal CSS, search linked external CSS files
+    const cssFiles = findLinkedCSSFiles(htmlContent, htmlDoc.uri.fsPath);
+
+    if (cssFiles.length === 0) {
+        vscode.window.showInformationMessage('No local CSS files found (external URLs or unresolved paths may have been skipped)');
+        clearHighlights();
+        return;
+    }
+
+    // Search for selector in external CSS files
     let found = false;
     for (const cssFile of cssFiles) {
         if (fs.existsSync(cssFile)) {
-              const cssContent = await fs.promises.readFile(cssFile, 'utf8');
+            const cssContent = await fs.promises.readFile(cssFile, 'utf8');
             const ranges = findSelectorInCSS(cssContent, selector);
-            
+
             if (ranges.length > 0) {
                 await openAndHighlightCSS(cssFile, ranges);
                 found = true;
@@ -153,14 +295,14 @@ function findLinkedCSSFiles(htmlContent: string, htmlFilePath: string): string[]
     const cssFiles: string[] = [];
     const linkRegex = /<link[^>]*rel\s*=\s*["']stylesheet["'][^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi;
     const linkRegex2 = /<link[^>]*href\s*=\s*["']([^"']+)["'][^>]*rel\s*=\s*["']stylesheet["'][^>]*>/gi;
-    
+
     let match;
         while ((match = linkRegex.exec(htmlContent)) !== null) {
             const href = match[1];
             const absolutePath = resolveFilePath(href, htmlFilePath);
             if (absolutePath) cssFiles.push(absolutePath);
         }
-    
+
         while ((match = linkRegex2.exec(htmlContent)) !== null) {
             const href = match[1];
             const absolutePath = resolveFilePath(href, htmlFilePath);
@@ -168,7 +310,7 @@ function findLinkedCSSFiles(htmlContent: string, htmlFilePath: string): string[]
                 cssFiles.push(absolutePath);
             }
         }
-    
+
     return cssFiles;
 }
 
