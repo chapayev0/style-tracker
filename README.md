@@ -11,16 +11,14 @@ Track CSS rules in real-time as you navigate through your HTML, JSX, and other m
 ## Screenshots
 
 ### Tracking CSS Classes
-![Tracking CSS Classes](images/screenshots/tracking-classes.png)
+![Tracking CSS Classes](images/screenshots/1.png)
 
-### Tracking HTML Elements
-![Tracking HTML Elements](images/screenshots/tracking-elements.png)
+![Internal CSS Support](images/screenshots/4.png)
 
-### Internal CSS Support
-![Internal CSS Support](images/screenshots/internal-css.png)
+![Tracking HTML Elements](images/screenshots/3.png)
 
-### Toggle Tracking Feature
-![Toggle Tracking](images/screenshots/toggle-tracking.png)
+### Enable and Dsable Tracking
+![Enable and Disable Tracking](images/screenshots/2.png)
 
 ---
 
