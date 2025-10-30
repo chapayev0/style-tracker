@@ -4,6 +4,24 @@
 
 Track CSS rules in real-time as you navigate through your HTML, JSX, and other markup files. Style Tracker opens a split view showing the exact CSS code for the element under your cursor.
 
+**Official Website**: [bashademy.com](https://bashademy.com/)
+
+---
+
+## Screenshots
+
+### Tracking CSS Classes
+![Tracking CSS Classes](images/screenshots/tracking-classes.png)
+
+### Tracking HTML Elements
+![Tracking HTML Elements](images/screenshots/tracking-elements.png)
+
+### Internal CSS Support
+![Internal CSS Support](images/screenshots/internal-css.png)
+
+### Toggle Tracking Feature
+![Toggle Tracking](images/screenshots/toggle-tracking.png)
+
 ---
 
 ## Features
