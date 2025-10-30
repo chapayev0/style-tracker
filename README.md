@@ -1,5 +1,9 @@
 # Style Tracker
 
+<p align="center">
+  <img src="images/icon.png" alt="Style Tracker Icon" width="128" height="128">
+</p>
+
 > **Instantly locate and highlight CSS styles for any HTML element, class, or ID in your code**
 
 Track CSS rules in real-time as you navigate through your HTML, JSX, and other markup files. Style Tracker opens a split view showing the exact CSS code for the element under your cursor.
