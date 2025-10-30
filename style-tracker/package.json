@@ -1,7 +1,9 @@
 {
   "name": "style-tracker",
   "version": "1.0.0",
-  "description": "",
+  "description": "Instantly locate and highlight CSS styles for any HTML element, class, or ID in your code. Real-time CSS tracking with split view.",
+  "displayName": "Style Tracker",
+  "publisher": "bashademy",
   "main": "out/extension.js",
   "directories": {
     "test": "test"
@@ -11,9 +13,29 @@
     "watch": "tsc -p . --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "css",
+    "html",
+    "style",
+    "tracker",
+    "highlight",
+    "jsx",
+    "react"
+  ],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bashademy/style-tracker.git"
+  },
+  "homepage": "https://bashademy.com/",
+  "bugs": {
+    "url": "https://github.com/bashademy/style-tracker/issues"
+  },
   "icon": "images/icon.svg",
   "type": "commonjs",
   "engines": {
